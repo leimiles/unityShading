@@ -152,7 +152,9 @@ vector = x，y，z，w 其中 w 的值总是 0 或者 1，用于表示点（poin
 
 除了变换，矩阵还可以作为空间转换使用（也是一种变换），即求得不同坐标系下，坐标之间的关系，例如，在坐标系 A 的空间中，有一个坐标是 a，而坐标系 A 又处在 B 坐标系下，我们想知道在 B 坐标系下，a 的坐标应该是多少，(即需要得到 B 坐标系下，a 的变换过程) 这里面最重要的计算依据，就是 A 的变换矩阵，这个矩阵记录了 A 是怎么被移动到当前位置的，即 A 的 transform，在 unity 中这个矩阵称为 localToWorld，计算方法为
 
-a_in_B_Space = A_in_B_space * a_in_A_Space
+```
+a_in_B_space = A_in_B_space * a_in_A_space
+```
 
 <div align=center>
 <img src="Imgs/08.png"/>
