@@ -164,3 +164,49 @@ a_in_B_space = A_in_B_space * a_in_A_space
 >* 坐标系 coordinates systems
 
 
+### compute shader 小记
+
+>* compute shader 的计算并不存在于 graphics pipeline 中，它和 graphics pipeline 是两套 GPU 的功能逻辑，一个用于渲染，一个则用于计算
+>* compute shader 发生在 gpu 端，它的计算可以用于任何目的，特点是这些计算是并行发生的
+>* compute shader 没有所谓的输入和输出，它就像是一个 void 函数，没有输入参数，没有输出参数，一切都在函数内部发生，并且直接发生在显存上
+>* compute shader 的计算单元是 workgroups，他们通过排列组合成 row, column, depth 的形式，即 x, y, z 三个方向上，每个方向上的数量是可以指定的
+>* compute shader 计算就是 workgroups 的计算，但每个 workgroup 的对于计算的过程是彼此独立，没有依赖的
+>* compute shader 的 workgroups 内部拥有多个线程，称之为 invocations，一个 workgroup 中的 invocations 是可以彼此交流的，每个 invocation 都会有一个 id
+>* compute shader 的系统参数包括
+>>* gl_NumWorkGroups， uvec3，总的 workgroups 的数量
+>>* gl_WorkGroupID，uvec3，当前的 workgroup 的 id
+>>* gl_LocalInvocationID，uvec3，相对于当前 workgroup 的 invocation id
+>>* gl_GlobalInvocationID，uvec3，相对于整个 compute shader 的 invocation id，该值可以通过 gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID 得到，如果每个 workgroup 只有一个 invocation，则 workgroupID 与 globalInvocationID 相等
+>>* gl_LocalInvocationIndex，uint，相对于当前 workgroup 的 invocation index，是个整数
+>* compute shader 在默认情况下并不会关心 graphics pipeline 此时在干什么，所以有时候会需要 graphics pipeline 等待 compute shader 完成后再开始
+>* compute shader 并不会渲染任何东西，所以通常我们会希望定义一个纹理，用 compute shader 的计算直接应先该纹理的像素，并在 graphics pipeline 中渲染该纹理
+
+### compute shader 示例
+
+unity 中，它是 .compute 文件，默认打开后，形式如下
+```
+// Each Kernel tells which function to compile; you can have many Kernels
+
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite and set it with cs.SetTexture
+
+RWTexture2D <float4> Result;
+
+[numthreads(8, 8, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here
+    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15) /15.0, 0);
+}
+```
+
+#### compute shader 的结构
+
+>* kernel 是 compute shader 的执行单元，好似 vertex，或者 fragment，它的形式与 "#pragma vertex vert" 是一样的，是用一种声明的形式，告诉编译器，有一个叫做 xxx 的函数，要被编译成一个 kernel 这些 kernel 最终都会被 gpu 执行，一个 .compute 文件，可以定义多个 kernels
+>* RWTexture2D 是一个预定义的数据类型，这是一个 2D 纹理数据，并且可以读取和写入
+>* numthreads 决定最终要产生多少个计算线程，由 numthreads(x, y, z) 的值决定，本质上它只是决定计算量，而至于计算用于什么目的，则由函数的具体实现来决定，才上面这个粒子中，
+>* compute shader 的运算，是基于每个 thread 而言的，好似 vertex 基于每个顶点，fragment 基于每个片元
+
+
+
