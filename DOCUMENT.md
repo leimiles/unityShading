@@ -163,6 +163,7 @@ a_in_B_space = A_in_B_space * a_in_A_space
 
 >* 坐标系 coordinates systems
 
+## COMPUTE SHADER
 
 ### compute shader 小记
 
@@ -201,7 +202,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 }
 ```
 
-#### compute shader 的结构
+### compute shader 的结构
 
 >* kernel 是 compute shader 的执行单元，好似 vertex，或者 fragment，它的形式与 "#pragma vertex vert" 是一样的，是用一种声明的形式，告诉编译器，有一个叫做 xxx 的函数，要被编译成一个 kernel 这些 kernel 最终都会被 gpu 执行，一个 .compute 文件，可以定义多个 kernels
 >* RWTexture2D 是一个预定义的数据类型，这是一个 2D 纹理数据，并且可以读取和写入
