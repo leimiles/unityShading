@@ -130,15 +130,16 @@ unity urp 只能使用 forward，而 hdrp 则二者皆可
 
 urp 和 hdrp 都推荐用 shader graph 来构建 shader 程序，这种方式的最大问题是在大版本升级的时候，例如 2019 -> 2020 出现兼容问题，hlsl 代码流才是最靠谱的方式
 
->* 矩阵计算 matrices
+### 矩阵计算 matrices
 
-矩阵相乘， m x n 矩阵与 i * k 矩阵相乘时，只有 n == i 时，相乘计算才能有意义，且结果为 m * k 的矩阵
+矩阵相乘， m * n 矩阵与 i * k 矩阵相乘时，只有 n == i 时，相乘计算才能有意义，且结果为 m * k 的矩阵
 
 unity 中 m 矩阵来自于对象当前的 transform，这是一个 4x4 矩阵，这是因为这样可以统一旋转缩放与平移变换的矩阵乘法，
 
 vector = x，y，z，w 其中 w 的值总是 0 或者 1，用于表示点（point）的时候等于 1，用于表示方向（direction）的的时候则为 0
 
 变换（transform) 是矩阵最主要的作用，一个矩阵，表示了一种变换，例如
+
 ```
 1 0 0 1
 0 1 0 1
@@ -146,14 +147,16 @@ vector = x，y，z，w 其中 w 的值总是 0 或者 1，用于表示点（poin
 0 0 0 1
 ```
 
-这个矩阵表示了 "平移 = 1, 1, 1" 的变换，这个概念需要动态地去理解，想象成 "把一个东西向 x，y，z 三个方向都平移 1 个单位" 的一个动作，会比较形象，在计算中，M * p (p 是一个 vector)，会得到对这个 p 进行 M 变换后的结果，即 p'， 如果计算中有 M1 * M2 * M3 * p，则表示一个复合的变换，顺序是先 M3 再 M2 最后 M1，例如常见的一种情况是，先平移变换，再旋转变换，最后缩放变换
-
-单位矩阵则表示了 "什么都不做" 的变换
+这个矩阵表示了 "平移 = 1, 1, 1" 的变换，这个概念需要动态地去理解，想象成 "把一个东西向 x，y，z 三个方向都平移 1 个单位" 的一个动作，会比较形象，在计算中，M * p (p 是一个 vector)，会得到对这个 p 进行 M 变换后的结果，即 p'， 如果计算中有 M1 * M2 * M3 *q矩阵则表示了 "什么都不做" 的变换
 
 除了变换，矩阵还可以作为空间转换使用（也是一种变换），即求得不同坐标系下，坐标之间的关系，例如，在坐标系 A 的空间中，有一个坐标是 a，而坐标系 A 又处在 B 坐标系下，我们想知道在 B 坐标系下，a 的坐标应该是多少，(即需要得到 B 坐标系下，a 的变换过程) 这里面最重要的计算依据，就是 A 的变换矩阵，这个矩阵记录了 A 是怎么被移动到当前位置的，即 A 的 transform，在 unity 中这个矩阵称为 localToWorld，计算方法为
 
 ```
 a_in_B_space = A_in_B_space * a_in_A_space
+```
+
+```
+a_in_A_space = A_in_B_space_I * a_in_B_space
 ```
 
 <div align=center>
@@ -162,6 +165,47 @@ a_in_B_space = A_in_B_space * a_in_A_space
 
 
 >* 坐标系 coordinates systems
+
+1，模型坐标系，也叫局部坐标系，是坐标系原点位于模型空间的 0, 0, 0 位置的坐标系，通常是几何体顶点位置的初始坐标系，几何体顶点都在该坐标系下构建
+2，世界坐标系，坐标系原点位于世界中心，使用 unity_ObjectToWorld 矩阵能够求得局部到世界的变换
+3，相机坐标系，坐标系原点位于摄影机，使用 UNITY_MATRIX_V 矩阵能够求得世界到相机的变换
+4，裁剪坐标系，也叫投影坐标系，是该坐标系油相机的由相机的 near plane，far plane，fov 所构建，使用 UNITY_MATRIX_P 矩阵能够求得相机到裁剪的变换
+5，NDC坐标系，标准设备坐标系，根据图形 API 不同而略有区别，
+6，视口坐标系，也叫屏幕坐标系，根据图形 API 不同而略有区别，是一个 2D 坐标系
+
+### 回看 unity shader 种类
+
+1，surface shader，只在默认管线下可用，实现基础的表面着色
+2，unlit shader，SRP 与 默认管线下皆可用，通常用于低端设备，注意虽然叫做 unlit 但是也开始可以在程序中添加光照算法的
+3，image effect shader，默认管线下用于后处理效果的 shader，必须借助脚本的 OnRenderImage 回调来实现
+4，compute shader，单独用于执行在 gpu 上的 shader，他不属于图形管线，专门用于计算，其结果保存在显存中，可以被调用
+5，ray tracing shader，属于 unity 的实验性产品，尽在 hdrp 管线下使用，在 DXR 环境下 (DirectX Ray Tracing) 必须使用 GTX1080 或者 RTX 支持的显卡，如果要使用 compute shader 来进行 ray-casting，gl, reflection，refraction，caustic 等计算，可直接用这种 ray tracing shader 来替代
+
+### unity shader 的基本结构
+
+```
+Shader "simpleTest" {
+Properties {
+    // properties in this field
+}
+SubShader {
+    // SubShader configuration in this field
+    Pass {
+        CGPROGRAM
+        // programa Cg - HLSL in this field
+        ENDCG
+    }
+    Pass {
+        CGPROGRAM
+        // programa Cg - HLSL in this field
+        ENDCG
+    }
+}
+Fallback "ExampleOtherShader"
+}
+```
+
+shader 程序从上到下依次线性执行的，所以如果函数的声明卸载函数调用的下方，则会找不到该函数，fallback 通常是一个保证最大兼容的选项，保证该 shader 能正确被执行
 
 ## COMPUTE SHADER
 
